@@ -327,7 +327,8 @@ class PlayerModel extends Listener {
         // fit if tool is in the annotation mode or frame loading is first in the interpolation mode
         if (this._settings.resetZoom || this._frame.previous === null || differentRotation) {
             this._frame.previous = this._frame.current;
-            this.fit(); // notify() inside the fit()
+            //this.fit(); // notify() inside the fit()
+			this.notify();
         } else {
             this._frame.previous = this._frame.current;
             this.notify();
