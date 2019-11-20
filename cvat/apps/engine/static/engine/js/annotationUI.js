@@ -607,12 +607,11 @@ function buildAnnotationUI(jobData, taskData, imageMetaData, annotationData, ann
         }));
     new PlayerView(playerModel, playerController);
 
-	
-	const shapeMergerModel = new ShapeMergerModel(shapeCollectionModel, playerController);
+    const shapeMergerModel = new ShapeMergerModel(shapeCollectionModel, playerController);
     const shapeMergerController = new ShapeMergerController(shapeMergerModel);
     new ShapeMergerView(shapeMergerModel, shapeMergerController);
-	
-	const shapeBufferModel = new ShapeBufferModel(shapeCollectionModel, shapeMergerModel);
+
+    const shapeBufferModel = new ShapeBufferModel(shapeCollectionModel, shapeMergerModel);
     const shapeBufferController = new ShapeBufferController(shapeBufferModel);
     const shapeBufferView = new ShapeBufferView(shapeBufferModel, shapeBufferController);
 	

@@ -69,8 +69,8 @@ class ShapeCollectionModel extends Listener {
         this._colorIdx = 0;
         this._filter = new FilterModel(() => this.update());
         this._splitter = new ShapeSplitter();
-		this._autopropagate = 0;
-		this._autopropframes = 0;
+        this._autopropagate = 0;
+        this._autopropframes = 0;
     }
 
     _nextGroupIdx() {

@@ -24,7 +24,7 @@ class ShapeBufferModel extends Listener  {
     constructor(collection, mergeCollection) {
         super('onShapeBufferUpdate', () => this);
         this._collection = collection;
-		this._mergeCollection = mergeCollection;
+        this._mergeCollection = mergeCollection;
         this._pasteMode = false;
         this._propagateFrames = 50;
         this._shape = {
@@ -174,7 +174,7 @@ class ShapeBufferModel extends Listener  {
 
     propagateToFrames() {
         let numOfFrames = this._propagateFrames;
-		this._collection._autopropframes = Number(numOfFrames);
+        this._collection._autopropframes = Number(numOfFrames);
         if (this._shape.type && Number.isInteger(numOfFrames)) {
             let object = null;
             if (this._shape.type === 'box') {
@@ -261,8 +261,8 @@ class ShapeBufferModel extends Listener  {
                     // End of undo/redo code
                 }
             }
-			this._collection._autopropagate = 1;
-			this._mergeCollection.start();
+            this._collection._autopropagate = 1;
+            this._mergeCollection.start();
         }
     }
 
