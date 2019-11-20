@@ -818,6 +818,12 @@ class ShapeCollectionModel extends Listener {
         }
     }
 
+    removeActiveShape_auto(lastPosition) {
+        this.selectShape(lastPosition, false);
+        let activeShape = this.activeShape;
+        activeShape.remove();
+    }
+
     get flush() {
         return this._flush;
     }

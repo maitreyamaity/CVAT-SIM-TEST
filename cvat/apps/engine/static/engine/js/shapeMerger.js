@@ -288,13 +288,30 @@ class ShapeMergerController {
     }
 
     click() {
-        this._model._LASTPOS = this._model._collectionModel.lastPosition;
-        if(this._model._collectionModel._autopropagate==1){
-            var r = confirm("Are you sure about AutoPropagation");
-            if(r==true){
+        if(this._model._collectionModel._autopropagate==1) {
+            this._model._LASTPOS = this._model._collectionModel.lastPosition;
+            var r = confirm("Auto Propagation:\n[OK] Execute, [CANCEL] Reselect/Cancel");
+            if (r == true) {
                 this._model.autoclick();
             }
-        }else{
+            else {
+                var r2 = confirm("Reselect Shape:\n[OK] Select Shape, [CANCEL] Refresh");
+                if(r2==false) {
+                    for (var i = 0; i < this._model._collectionModel._autopropframes+1; i++) {
+                        this._model._collectionModel.removeActiveShape_auto(this._model._LASTPOS);
+                        this._model._playerModel.next();
+                    }
+                    for (var i = 0; i < this._model._collectionModel._autopropframes+1; i++) {
+                        this._model._playerModel.previous();
+                    }
+                    this._model._collectionModel._autopropagate=0:
+                    this._model._collectionModel._autopropframes=0;
+                    this._model._LASTPOS = null;
+                    this._model.cancel();
+                }
+            }
+        }
+        else {
             this._model.click();
         }
     }
