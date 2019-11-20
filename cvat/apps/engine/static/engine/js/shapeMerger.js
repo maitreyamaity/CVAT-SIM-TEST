@@ -15,9 +15,11 @@
 "use strict";
 
 class ShapeMergerModel extends Listener {
-    constructor(collectionModel) {
+    constructor(collectionModel, playerModel) {
         super('onShapeMergerUpdate', () => this);
         this._collectionModel = collectionModel;
+		this._playerModel = playerModel;
+		this._LASTPOS = null;
         this._shapesForMerge = [];
         this._mergeMode = false;
         this._shapeType = null;
@@ -40,6 +42,17 @@ class ShapeMergerModel extends Listener {
                 shape.merge = true;
             }
         }
+    }
+	
+	_pushForMerge_auto1(shape) {
+        this._shapeType = shape.type.split('_')[1];
+        this._shapesForMerge.push(shape);
+        shape.merge = true;
+    }
+	
+	_pushForMerge_auto2(shape) {
+        this._shapesForMerge.push(shape);
+        shape.merge = true;
     }
 
     start() {
@@ -221,6 +234,27 @@ class ShapeMergerModel extends Listener {
             }
         }
     }
+	
+	autoclick() {
+		var i;
+		for(i=0;i<this._collectionModel._autopropframes+1;i++){
+			if (this._mergeMode) {
+            const active = this._collectionModel.selectShape(
+                this._LASTPOS,
+                true,
+            );
+            if (active) {
+				if(i==0){this._pushForMerge_auto1(active);}
+				else{this._pushForMerge_auto2(active);}
+            }
+        }
+		this._playerModel.next();	
+		}
+		this.done();
+		this._collectionModel._autopropagate=0;
+		this._collectionModel._autopropframes=0;
+		this._LASTPOS = null;		
+    }
 
     get mergeMode() {
         return this._mergeMode;
@@ -253,7 +287,12 @@ class ShapeMergerController {
     }
 
     click() {
-        this._model.click();
+		this._model._LASTPOS = this._model._collectionModel.lastPosition;
+		if(this._model._collectionModel._autopropagate==1){
+			var r = confirm("Are you sure about AutoPropagation");
+			if(r==true){this._model.autoclick();}		
+		}else{	
+        this._model.click();}
     }
 }
 

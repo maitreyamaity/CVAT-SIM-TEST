@@ -567,9 +567,9 @@ function buildAnnotationUI(jobData, taskData, imageMetaData, annotationData, ann
         clear: () => shapeCollectionModel.empty(),
     };
 
-    const shapeBufferModel = new ShapeBufferModel(shapeCollectionModel);
-    const shapeBufferController = new ShapeBufferController(shapeBufferModel);
-    const shapeBufferView = new ShapeBufferView(shapeBufferModel, shapeBufferController);
+    //const shapeBufferModel = new ShapeBufferModel(shapeCollectionModel);
+    //const shapeBufferController = new ShapeBufferController(shapeBufferModel);
+    //const shapeBufferView = new ShapeBufferView(shapeBufferModel, shapeBufferController);
 
     $('#shapeModeSelector').prop('value', taskData.mode);
     const shapeCreatorModel = new ShapeCreatorModel(shapeCollectionModel);
@@ -584,9 +584,9 @@ function buildAnnotationUI(jobData, taskData, imageMetaData, annotationData, ann
     // Add static member for class. It will be used by all polyshapes.
     PolyShapeView.editor = polyshapeEditorModel;
 
-    const shapeMergerModel = new ShapeMergerModel(shapeCollectionModel);
-    const shapeMergerController = new ShapeMergerController(shapeMergerModel);
-    new ShapeMergerView(shapeMergerModel, shapeMergerController);
+    //const shapeMergerModel = new ShapeMergerModel(shapeCollectionModel);
+    //const shapeMergerController = new ShapeMergerController(shapeMergerModel);
+    //new ShapeMergerView(shapeMergerModel, shapeMergerController);
 
     const shapeGrouperModel = new ShapeGrouperModel(shapeCollectionModel);
     const shapeGrouperController = new ShapeGrouperController(shapeGrouperModel);
@@ -607,7 +607,15 @@ function buildAnnotationUI(jobData, taskData, imageMetaData, annotationData, ann
         }));
     new PlayerView(playerModel, playerController);
 
-
+	
+	const shapeMergerModel = new ShapeMergerModel(shapeCollectionModel, playerController);
+    const shapeMergerController = new ShapeMergerController(shapeMergerModel);
+    new ShapeMergerView(shapeMergerModel, shapeMergerController);
+	
+	const shapeBufferModel = new ShapeBufferModel(shapeCollectionModel, shapeMergerModel);
+    const shapeBufferController = new ShapeBufferController(shapeBufferModel);
+    const shapeBufferView = new ShapeBufferView(shapeBufferModel, shapeBufferController);
+	
     const aamModel = new AAMModel(shapeCollectionModel, (xtl, xbr, ytl, ybr) => {
         playerModel.focus(xtl, xbr, ytl, ybr);
     }, () => {
