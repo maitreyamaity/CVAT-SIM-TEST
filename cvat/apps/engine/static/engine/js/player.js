@@ -173,6 +173,8 @@ class PlayerModel extends Listener {
         window.cvat.player.rotation = this._geometry.rotation;
 
         this._frameProvider.subscribe(this);
+        this._currentFrameNum = 0;
+        this._lastFrameNum = 0;
     }
 
     get frames() {
@@ -303,6 +305,8 @@ class PlayerModel extends Listener {
         this._frame.current = Math.clamp(absolute ? delta : this._frame.current + delta,
             this._frame.start,
             this._frame.stop);
+        this._currentFrameNum = Number(this._frame.current);
+        this._lastFrameNum = Number(this._frame.stop);
         const frame = this._frameProvider.require(this._frame.current);
         if (!frame) {
             this._continueAfterLoad = this.playing;
@@ -688,6 +692,14 @@ class PlayerController {
     rotate(angle) {
         Logger.addEvent(Logger.EventType.rotateImage);
         this._model.rotate(angle);
+    }
+
+    currentFrameNum() {
+        return this._model._currentFrameNum;
+    }
+
+    lastFrameNum() {
+        return this._model._lastFrameNum;
     }
 
     get rotateAll() {

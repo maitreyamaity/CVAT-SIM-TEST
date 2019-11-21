@@ -262,7 +262,7 @@ class ShapeBufferModel extends Listener  {
                 }
             }
             this._collection._autopropagate = 1;
-            this._mergeCollection.start();
+            this._mergeCollection.autostart();
         }
     }
 

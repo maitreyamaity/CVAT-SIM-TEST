@@ -64,6 +64,59 @@ class ShapeMergerModel extends Listener {
         }
     }
 
+    autostart(){        
+        if(this._collectionModel._autopropagate==1){
+            this.start();
+            this._LASTPOS = this._collectionModel.lastPosition;
+            var r = confirm("Auto Propagation:\n[OK] Execute, [CANCEL] Reset");
+            if (r == true) {
+                this.autoclick();
+            }else {
+                this.autocancel();
+            }            
+        }
+    }
+
+    autocancel() {
+        var amodel = this._collectionModel._autopropshape;
+        var ashapeType = amodel.type.split('_')[1];
+        var positions = amodel._positions;
+        var lf = this._playerModel.currentFrameNum()+this._collectionModel._autopropframes;
+        var lf2 = this._playerModel.lastFrameNum();
+        var looplimit = this._collectionModel._autopropframes;
+        if(lf>lf2) {
+            lf = lf2;
+            looplimit = lf2;
+        }
+        var position = JSON.parse(JSON.stringify(positions[String(lf)]));
+        if (ashapeType == 'box'){                    
+            var px = Number(position.xtl);
+            var py = Number(position.ytl);        
+            this._LASTPOS.x = px;
+            this._LASTPOS.y = py;
+        }
+        else {
+            var points = position.points;
+            var pp = points.split(',')[1];
+            var px = Number(pp.split(' ')[1]);
+            var py = Number(pp.split(' ')[0]);
+            this._LASTPOS.x = px;
+            this._LASTPOS.y = py;
+        }
+
+        for (var i = 0; i < looplimit+1; i++) {
+            this._collectionModel.removeActiveShape_auto(this._LASTPOS);
+            this._playerModel.next();
+        }
+        for (var i = 0; i < looplimit+1; i++) {
+            this._playerModel.previous();
+        }
+        this._collectionModel._autopropagate=0;
+        this._collectionModel._autopropframes=0;
+        this._LASTPOS = null;
+        this.cancel();
+    }
+
     done() {
         if (this._shapesForMerge.length > 1) {
             let shapeDict = {};
@@ -236,25 +289,55 @@ class ShapeMergerModel extends Listener {
     }
 
     autoclick() {
-        var i;
-        for(i=0;i<this._collectionModel._autopropframes+1;i++){
-            if (this._mergeMode) {
-                const active = this._collectionModel.selectShape(this._LASTPOS,true,);
-                if (active) {
-                    if(i==0){
-                        this._pushForMerge_auto1(active);
-                    }
-                    else{
-                        this._pushForMerge_auto2(active);
+        var amodel = this._collectionModel._autopropshape;
+        var ashapeType = amodel.type.split('_')[1];
+        var positions = amodel._positions;
+        var lf = this._playerModel.currentFrameNum()+this._collectionModel._autopropframes;
+        var lf2 = this._playerModel.lastFrameNum();
+        var looplimit = this._collectionModel._autopropframes;
+        if(lf>lf2) { 
+            lf = lf2;
+            looplimit = lf2;
+        }
+        var position = JSON.parse(JSON.stringify(positions[String(lf)]));
+        if (ashapeType == 'box'){                    
+                var px = Number(position.xtl);
+                var py = Number(position.ytl);        
+                this._LASTPOS.x = px;
+                this._LASTPOS.y = py;
+            }
+        else{
+                var points = position.points;
+                var pp = points.split(',')[1];
+                var px = Number(pp.split(' ')[1]);
+                var py = Number(pp.split(' ')[0]);
+                this._LASTPOS.x = px;
+                this._LASTPOS.y = py;
+            }      
+            for (var i = 0; i < looplimit+1; i++) {
+                if (this._mergeMode) {
+                    const active = this._collectionModel.selectShape(
+                        this._LASTPOS,
+                        true,
+                    );
+                    if (active) {
+                        if(i==0){
+                        this._pushForMerge_auto1(active);}
+                        else{
+                            this._pushForMerge_auto2(active);}
                     }
                 }
+                this._playerModel.next();
             }
-            this._playerModel.next();
-        }
-        this.done();
-        this._collectionModel._autopropagate=0;
-        this._collectionModel._autopropframes=0;
-        this._LASTPOS = null;
+            this.done();
+            this._collectionModel._autopropagate=0;
+            this._collectionModel._autopropframes=0;
+            this._LASTPOS = null;        
+        //}
+        //else {            
+        //    window.alert("Propagation values exceeds maximum frames");
+        //    this.autocancel();
+        //}
     }
 
     get mergeMode() {
@@ -288,32 +371,7 @@ class ShapeMergerController {
     }
 
     click() {
-        if(this._model._collectionModel._autopropagate==1) {
-            this._model._LASTPOS = this._model._collectionModel.lastPosition;
-            var r = confirm("Auto Propagation:\n[OK] Execute, [CANCEL] Reselect/Cancel");
-            if (r == true) {
-                this._model.autoclick();
-            }
-            else {
-                var r2 = confirm("Reselect Shape:\n[OK] Select Shape, [CANCEL] Refresh");
-                if(r2==false) {
-                    for (var i = 0; i < this._model._collectionModel._autopropframes+1; i++) {
-                        this._model._collectionModel.removeActiveShape_auto(this._model._LASTPOS);
-                        this._model._playerModel.next();
-                    }
-                    for (var i = 0; i < this._model._collectionModel._autopropframes+1; i++) {
-                        this._model._playerModel.previous();
-                    }
-                    this._model._collectionModel._autopropagate=0:
-                    this._model._collectionModel._autopropframes=0;
-                    this._model._LASTPOS = null;
-                    this._model.cancel();
-                }
-            }
-        }
-        else {
-            this._model.click();
-        }
+        this._model.click();
     }
 }
 

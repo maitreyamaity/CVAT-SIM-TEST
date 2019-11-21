@@ -71,6 +71,7 @@ class ShapeCollectionModel extends Listener {
         this._splitter = new ShapeSplitter();
         this._autopropagate = 0;
         this._autopropframes = 0;
+        this._autopropshape = null;
     }
 
     _nextGroupIdx() {
@@ -404,6 +405,7 @@ class ShapeCollectionModel extends Listener {
             this._groups[groupIdx] = this._groups[groupIdx] || [];
             this._groups[groupIdx].push(model);
         }
+        this._autopropshape = model;
         return model;
     }
 
@@ -821,7 +823,9 @@ class ShapeCollectionModel extends Listener {
     removeActiveShape_auto(lastPosition) {
         this.selectShape(lastPosition, false);
         let activeShape = this.activeShape;
-        activeShape.remove();
+        if(activeShape) {
+            activeShape.remove();
+        }
     }
 
     get flush() {
