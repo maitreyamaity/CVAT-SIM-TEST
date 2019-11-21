@@ -44,17 +44,6 @@ class ShapeMergerModel extends Listener {
         }
     }
 
-    _pushForMerge_auto1(shape) {
-        this._shapeType = shape.type.split('_')[1];
-        this._shapesForMerge.push(shape);
-        shape.merge = true;
-    }
-    
-    _pushForMerge_auto2(shape) {
-        this._shapesForMerge.push(shape);
-        shape.merge = true;
-    }
-
     start() {
         if (!window.cvat.mode) {
             window.cvat.mode = 'merge';
@@ -68,7 +57,7 @@ class ShapeMergerModel extends Listener {
         if(this._collectionModel._autopropagate==1){
             this.start();
             this._LASTPOS = this._collectionModel.lastPosition;
-            var r = confirm("Auto Propagation:\n[OK] Execute, [CANCEL] Reset");
+            var r = confirm("AUTO PROPAGATION:\n[OK] Execute, [CANCEL] Reset\n* First point of the shape should not overlap with others");
             if (r == true) {
                 this.autoclick();
             }else {
@@ -89,21 +78,28 @@ class ShapeMergerModel extends Listener {
             looplimit = lf2;
         }
         var position = JSON.parse(JSON.stringify(positions[String(lf)]));
-        if (ashapeType == 'box'){                    
+        if (ashapeType == 'box') {                    
             var px = Number(position.xtl);
             var py = Number(position.ytl);        
             this._LASTPOS.x = px;
             this._LASTPOS.y = py;
         }
+        else if (ashapeType == 'polygon') {
+            var points = position.points;
+            var pp = points.split(' ')[0];
+            var px = Number(pp.split(',')[0]);
+            var py = Number(pp.split(',')[1]);
+            this._LASTPOS.x = px+1;
+            this._LASTPOS.y = py+1;
+        } 
         else {
             var points = position.points;
-            var pp = points.split(',')[1];
-            var px = Number(pp.split(' ')[1]);
-            var py = Number(pp.split(' ')[0]);
+            var pp = points.split(' ')[0];
+            var px = Number(pp.split(',')[0]);
+            var py = Number(pp.split(',')[1]);
             this._LASTPOS.x = px;
             this._LASTPOS.y = py;
         }
-
         for (var i = 0; i < looplimit+1; i++) {
             this._collectionModel.removeActiveShape_auto(this._LASTPOS);
             this._playerModel.next();
@@ -114,6 +110,7 @@ class ShapeMergerModel extends Listener {
         this._collectionModel._autopropagate=0;
         this._collectionModel._autopropframes=0;
         this._LASTPOS = null;
+        this._collectionModel._autopropshape = null;
         this.cancel();
     }
 
@@ -300,39 +297,45 @@ class ShapeMergerModel extends Listener {
             looplimit = lf2;
         }
         var position = JSON.parse(JSON.stringify(positions[String(lf)]));
-        if (ashapeType == 'box'){                    
-                var px = Number(position.xtl);
-                var py = Number(position.ytl);        
-                this._LASTPOS.x = px;
-                this._LASTPOS.y = py;
-            }
-        else{
-                var points = position.points;
-                var pp = points.split(',')[1];
-                var px = Number(pp.split(' ')[1]);
-                var py = Number(pp.split(' ')[0]);
-                this._LASTPOS.x = px;
-                this._LASTPOS.y = py;
-            }      
-            for (var i = 0; i < looplimit+1; i++) {
-                if (this._mergeMode) {
-                    const active = this._collectionModel.selectShape(
-                        this._LASTPOS,
-                        true,
-                    );
-                    if (active) {
-                        if(i==0){
-                        this._pushForMerge_auto1(active);}
-                        else{
-                            this._pushForMerge_auto2(active);}
-                    }
+        if (ashapeType == 'box') {                    
+            var px = Number(position.xtl);
+            var py = Number(position.ytl);        
+            this._LASTPOS.x = px;
+            this._LASTPOS.y = py;
+        }
+        else if (ashapeType == 'polygon') {
+            var points = position.points;
+            var pp = points.split(' ')[0];
+            var px = Number(pp.split(',')[0]);
+            var py = Number(pp.split(',')[1]);
+            this._LASTPOS.x = px+1;
+            this._LASTPOS.y = py+1;
+        } 
+        else {
+            var points = position.points;
+            var pp = points.split(' ')[0];
+            var px = Number(pp.split(',')[0]);
+            var py = Number(pp.split(',')[1]);
+            this._LASTPOS.x = px;
+            this._LASTPOS.y = py;
+        }      
+        for (var i = 0; i < looplimit+1; i++) {
+            if (this._mergeMode) {
+                const active = this._collectionModel.selectShape(
+                    this._LASTPOS,
+                    true,
+                );
+                if (active) {
+                    this._pushForMerge(active);
                 }
-                this._playerModel.next();
             }
-            this.done();
-            this._collectionModel._autopropagate=0;
-            this._collectionModel._autopropframes=0;
-            this._LASTPOS = null;        
+            this._playerModel.next();
+        }
+        this.done();
+        this._collectionModel._autopropagate=0;
+        this._collectionModel._autopropframes=0;
+        this._LASTPOS = null;   
+        this._collectionModel._autopropshape = null;     
         //}
         //else {            
         //    window.alert("Propagation values exceeds maximum frames");
