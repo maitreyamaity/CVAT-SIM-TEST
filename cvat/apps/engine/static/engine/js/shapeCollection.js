@@ -696,6 +696,13 @@ class ShapeCollectionModel extends Listener {
         }
     }
 
+    switchActiveKeyframe2() {
+        let shape = this._selectActive();
+        if (shape && !shape.lock) {
+            shape.switchKeyFrame(window.cvat.player.frames.current);
+        }
+    }
+
     switchActiveOutside() {
         let shape = this._selectActive();
         if (shape && shape.type === 'interpolation_box' && !shape.lock) {
@@ -889,6 +896,10 @@ class ShapeCollectionController {
                 this.switchActiveOccluded();
             }.bind(this));
 
+            let switchXframeDeleteHandler = Logger.shortkeyLogDecorator(function() {
+                this.switchActiveKeyframe2();
+            }.bind(this));
+
             let switchActiveKeyframeHandler = Logger.shortkeyLogDecorator(function() {
                 this.switchActiveKeyframe();
             }.bind(this));
@@ -977,6 +988,7 @@ class ShapeCollectionController {
             Mousetrap.bind(shortkeys["switch_lock_property"].value, switchLockHandler.bind(this), 'keydown');
             Mousetrap.bind(shortkeys["switch_all_lock_property"].value, switchAllLockHandler.bind(this), 'keydown');
             Mousetrap.bind(shortkeys["switch_occluded_property"].value, switchOccludedHandler.bind(this), 'keydown');
+            Mousetrap.bind(shortkeys["merge_delete_frame"].value, switchXframeDeleteHandler.bind(this), 'keydown');
             Mousetrap.bind(shortkeys["switch_active_keyframe"].value, switchActiveKeyframeHandler.bind(this), 'keydown');
             Mousetrap.bind(shortkeys["switch_active_outside"].value, switchActiveOutsideHandler.bind(this), 'keydown');
             Mousetrap.bind(shortkeys["switch_hide_mode"].value, switchHideHandler.bind(this), 'keydown');
@@ -1005,6 +1017,12 @@ class ShapeCollectionController {
     switchActiveKeyframe() {
         if (!window.cvat.mode) {
             this._model.switchActiveKeyframe();
+        }
+    }
+
+    switchActiveKeyframe2() {
+        if (!window.cvat.mode) {
+            this._model.switchActiveKeyframe2();
         }
     }
 
