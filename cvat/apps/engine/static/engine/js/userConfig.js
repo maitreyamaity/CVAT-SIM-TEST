@@ -303,6 +303,12 @@ class Config {
                 view_value: 'Alt + <',
                 description: 'switch previous default shape type',
             },
+
+            merge_delete_frame: {
+                value: 'x',
+                view_value: 'X',
+                description: 'delete merge frame',
+            },
         };
 
         if (window.cvat && window.cvat.job && window.cvat.job.z_order) {

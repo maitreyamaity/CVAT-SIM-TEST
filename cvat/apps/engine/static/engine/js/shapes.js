@@ -2021,6 +2021,12 @@ class ShapeView extends Listener {
 
                 let keyframeButton = document.createElement('button');
                 keyframeButton.classList.add('graphicButton', 'keyFrameButton');
+                keyframeButton.setAttribute('title', `
+                    ${shortkeys['merge_delete_frame'].view_value} - ${shortkeys['merge_delete_frame'].description}`);                
+                let switchKeyFrameshortkey = Logger.shortkeyLogDecorator(function() {
+                    this._controller.switchKeyFrame();
+                    }.bind(this));                
+                Mousetrap.bind(shortkeys["merge_delete_frame"].value, switchKeyFrameshortkey.bind(this), 'keydown');
 
                 interpolationCenter.appendChild(outsideButton);
                 interpolationCenter.appendChild(keyframeButton);
