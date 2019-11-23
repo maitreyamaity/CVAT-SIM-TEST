@@ -9,7 +9,7 @@ from ast import literal_eval
 import shutil
 from datetime import datetime
 from tempfile import mkstemp
-
+from cvat.apps.engine.awsHelper import AWSHelper
 from django.http import HttpResponseBadRequest
 from django.shortcuts import redirect, render
 from django.conf import settings
@@ -26,7 +26,6 @@ from django_filters import rest_framework as filters
 import django_rq
 from django.db import IntegrityError
 
-
 from . import annotation, task, models
 from cvat.settings.base import JS_3RDPARTY, CSS_3RDPARTY
 from cvat.apps.authentication.decorators import login_required
@@ -34,10 +33,10 @@ import logging
 from .log import slogger, clogger
 from cvat.apps.engine.models import StatusChoice, Task, Job, Plugin
 from cvat.apps.engine.serializers import (TaskSerializer, UserSerializer,
-   ExceptionSerializer, AboutSerializer, JobSerializer, ImageMetaSerializer,
-   RqStatusSerializer, TaskDataSerializer, LabeledDataSerializer,
-   PluginSerializer, FileInfoSerializer, LogEventSerializer,
-   ProjectSerializer, BasicUserSerializer)
+                                          ExceptionSerializer, AboutSerializer, JobSerializer, ImageMetaSerializer,
+                                          RqStatusSerializer, TaskDataSerializer, LabeledDataSerializer,
+                                          PluginSerializer, FileInfoSerializer, LogEventSerializer,
+                                          ProjectSerializer, BasicUserSerializer)
 from cvat.apps.annotation.serializers import AnnotationFileSerializer
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
@@ -45,6 +44,7 @@ from cvat.apps.authentication import auth
 from rest_framework.permissions import SAFE_METHODS
 from cvat.apps.annotation.models import AnnotationDumper, AnnotationLoader
 from cvat.apps.annotation.format import get_annotation_formats
+
 
 # Server REST API
 @login_required
@@ -58,6 +58,7 @@ def dispatch_request(request):
         })
     else:
         return redirect('/dashboard/')
+
 
 class ServerViewSet(viewsets.ViewSet):
     serializer_class = None
@@ -75,12 +76,12 @@ class ServerViewSet(viewsets.ViewSet):
             "name": "Computer Vision Annotation Tool",
             "version": cvat_version,
             "description": "CVAT is completely re-designed and re-implemented " +
-                "version of Video Annotation Tool from Irvine, California " +
-                "tool. It is free, online, interactive video and image annotation " +
-                "tool for computer vision. It is being used by our team to " +
-                "annotate million of objects with different properties. Many UI " +
-                "and UX decisions are based on feedbacks from professional data " +
-                "annotation team."
+                           "version of Video Annotation Tool from Irvine, California " +
+                           "tool. It is free, online, interactive video and image annotation " +
+                           "tool for computer vision. It is being used by our team to " +
+                           "annotate million of objects with different properties. Many UI " +
+                           "and UX decisions are based on feedbacks from professional data " +
+                           "annotation team."
         }
         serializer = AboutSerializer(data=about)
         if serializer.is_valid(raise_exception=True):
@@ -112,7 +113,7 @@ class ServerViewSet(viewsets.ViewSet):
     def logs(request):
         serializer = LogEventSerializer(many=True, data=request.data)
         if serializer.is_valid(raise_exception=True):
-            user = { "username": request.user.username }
+            user = {"username": request.user.username}
             for event in serializer.data:
                 message = JSONRenderer().render({**event, **user}).decode('UTF-8')
                 jid = event.get("job_id")
@@ -151,13 +152,14 @@ class ServerViewSet(viewsets.ViewSet):
                 return Response(serializer.data)
         else:
             return Response("{} is an invalid directory".format(param),
-                status=status.HTTP_400_BAD_REQUEST)
+                            status=status.HTTP_400_BAD_REQUEST)
 
     @staticmethod
     @action(detail=False, methods=['GET'], url_path='annotation/formats')
     def formats(request):
         data = get_annotation_formats()
         return Response(data)
+
 
 class ProjectFilter(filters.FilterSet):
     name = filters.CharFilter(field_name="name", lookup_expr="icontains")
@@ -168,6 +170,7 @@ class ProjectFilter(filters.FilterSet):
     class Meta:
         model = models.Project
         fields = ("id", "name", "owner", "status", "assignee")
+
 
 class ProjectViewSet(auth.ProjectGetQuerySetMixin, viewsets.ModelViewSet):
     queryset = models.Project.objects.all().order_by('-id')
@@ -202,19 +205,20 @@ class ProjectViewSet(auth.ProjectGetQuerySetMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=['GET'], serializer_class=TaskSerializer)
     def tasks(self, request, pk):
-        self.get_object() # force to call check_object_permissions
+        self.get_object()  # force to call check_object_permissions
         queryset = Task.objects.filter(project_id=pk).order_by('-id')
         queryset = auth.filter_task_queryset(queryset, request.user)
 
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True,
-                context={"request": request})
+                                             context={"request": request})
             return self.get_paginated_response(serializer.data)
 
         serializer = self.get_serializer(queryset, many=True,
-            context={"request": request})
+                                         context={"request": request})
         return Response(serializer.data)
+
 
 class TaskFilter(filters.FilterSet):
     project = filters.CharFilter(field_name="project__name", lookup_expr="icontains")
@@ -227,13 +231,14 @@ class TaskFilter(filters.FilterSet):
     class Meta:
         model = Task
         fields = ("id", "project_id", "project", "name", "owner", "mode", "status",
-            "assignee")
+                  "assignee")
+
 
 class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
     queryset = Task.objects.all().prefetch_related(
-            "label_set__attributespec_set",
-            "segment_set__job_set",
-        ).order_by('-id')
+        "label_set__attributespec_set",
+        "segment_set__job_set",
+    ).order_by('-id')
     serializer_class = TaskSerializer
     search_fields = ("name", "owner__username", "mode", "status")
     filterset_class = TaskFilter
@@ -269,16 +274,16 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=['GET'], serializer_class=JobSerializer)
     def jobs(self, request, pk):
-        self.get_object() # force to call check_object_permissions
+        self.get_object()  # force to call check_object_permissions
         queryset = Job.objects.filter(segment__task_id=pk)
         serializer = JobSerializer(queryset, many=True,
-            context={"request": request})
+                                   context={"request": request})
 
         return Response(serializer.data)
 
     @action(detail=True, methods=['POST'], serializer_class=TaskDataSerializer)
     def data(self, request, pk):
-        db_task = self.get_object() # call check_object_permissions as well
+        db_task = self.get_object()  # call check_object_permissions as well
         serializer = TaskDataSerializer(db_task, data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -286,9 +291,9 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
     @action(detail=True, methods=['GET', 'DELETE', 'PUT', 'PATCH'],
-        serializer_class=LabeledDataSerializer)
+            serializer_class=LabeledDataSerializer)
     def annotations(self, request, pk):
-        self.get_object() # force to call check_object_permissions
+        self.get_object()  # force to call check_object_permissions
         if request.method == 'GET':
             data = annotation.get_task_data(pk, request.user)
             serializer = LabeledDataSerializer(data=data)
@@ -324,11 +329,11 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
                 return Response(data)
 
     @action(detail=True, methods=['GET'], serializer_class=None,
-        url_path='annotations/(?P<filename>[^/]+)')
+            url_path='annotations/(?P<filename>[^/]+)')
     def dump(self, request, pk, filename):
         filename = re.sub(r'[\\/*?:"<>|]', '_', filename)
         username = request.user.username
-        db_task = self.get_object() # call check_object_permissions as well
+        db_task = self.get_object()  # call check_object_permissions as well
         timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         action = request.query_params.get("action")
         if action not in [None, "download"]:
@@ -343,7 +348,7 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
                 "Please specify a correct 'format' parameter for the request")
 
         file_path = os.path.join(db_task.get_task_dirname(),
-            "{}.{}.{}.{}".format(filename, username, timestamp, db_dumper.format.lower()))
+                                 "{}.{}.{}.{}".format(filename, username, timestamp, db_dumper.format.lower()))
 
         queue = django_rq.get_queue("default")
         rq_id = "{}@/api/v1/tasks/{}/annotations/{}".format(username, pk, filename)
@@ -356,10 +361,10 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
                         rq_job.meta[action] = True
                         rq_job.save_meta()
                         return sendfile(request, rq_job.meta["file_path"], attachment=True,
-                            attachment_filename="{}.{}".format(filename, db_dumper.format.lower()))
+                                        attachment_filename="{}.{}".format(filename, db_dumper.format.lower()))
                     else:
                         return Response(status=status.HTTP_201_CREATED)
-                else: # Remove the old dump file
+                else:  # Remove the old dump file
                     try:
                         os.remove(rq_job.meta["file_path"])
                     except OSError:
@@ -386,9 +391,9 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=['GET'], serializer_class=RqStatusSerializer)
     def status(self, request, pk):
-        self.get_object() # force to call check_object_permissions
+        self.get_object()  # force to call check_object_permissions
         response = self._get_rq_response(queue="default",
-            job_id="/api/{}/tasks/{}".format(request.version, pk))
+                                         job_id="/api/{}/tasks/{}".format(request.version, pk))
         serializer = RqStatusSerializer(data=response)
 
         if serializer.is_valid(raise_exception=True):
@@ -400,23 +405,23 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
         job = queue.fetch_job(job_id)
         response = {}
         if job is None or job.is_finished:
-            response = { "state": "Finished" }
+            response = {"state": "Finished"}
         elif job.is_queued:
-            response = { "state": "Queued" }
+            response = {"state": "Queued"}
         elif job.is_failed:
-            response = { "state": "Failed", "message": job.exc_info }
+            response = {"state": "Failed", "message": job.exc_info}
         else:
-            response = { "state": "Started" }
+            response = {"state": "Started"}
             if 'status' in job.meta:
                 response['message'] = job.meta['status']
 
         return response
 
     @action(detail=True, methods=['GET'], serializer_class=ImageMetaSerializer,
-        url_path='frames/meta')
+            url_path='frames/meta')
     def data_info(self, request, pk):
         try:
-            db_task = self.get_object() # call check_object_permissions as well
+            db_task = self.get_object()  # call check_object_permissions as well
             meta_cache_file = open(db_task.get_image_meta_cache_path())
         except OSError:
             task.make_image_meta_cache(db_task)
@@ -428,7 +433,7 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
             return Response(serializer.data)
 
     @action(detail=True, methods=['GET'], serializer_class=None,
-        url_path='frames/(?P<frame>\d+)')
+            url_path='frames/(?P<frame>\d+)')
     def frame(self, request, pk, frame):
         """Get a frame for the task"""
 
@@ -437,14 +442,21 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
             # mimetype detection inside sendfile will work incorrectly.
             db_task = self.get_object()
             path = os.path.realpath(db_task.get_frame_path(frame))
-            return sendfile(request, path)
+            dirpath = os.getcwd()
+            relativefilepath = path.replace(dirpath + '/', "")
+            file_extension = os.path.splitext(path)[1]
+            tmppath = dirpath + '/data/temp' + file_extension
+            aws = AWSHelper()
+            aws.downloadFile(relativefilepath, tmppath)
+            return sendfile(request, tmppath)
         except Exception as e:
             slogger.task[pk].error(
                 "cannot get frame #{}".format(frame), exc_info=True)
             return HttpResponseBadRequest(str(e))
 
+
 class JobViewSet(viewsets.GenericViewSet,
-    mixins.RetrieveModelMixin, mixins.UpdateModelMixin):
+                 mixins.RetrieveModelMixin, mixins.UpdateModelMixin):
     queryset = Job.objects.all().order_by('id')
     serializer_class = JobSerializer
 
@@ -461,11 +473,10 @@ class JobViewSet(viewsets.GenericViewSet,
 
         return [perm() for perm in permissions]
 
-
     @action(detail=True, methods=['GET', 'DELETE', 'PUT', 'PATCH'],
-        serializer_class=LabeledDataSerializer)
+            serializer_class=LabeledDataSerializer)
     def annotations(self, request, pk):
-        self.get_object() # force to call check_object_permissions
+        self.get_object()  # force to call check_object_permissions
         if request.method == 'GET':
             data = annotation.get_job_data(pk, request.user)
             return Response(data)
@@ -497,13 +508,14 @@ class JobViewSet(viewsets.GenericViewSet,
             if serializer.is_valid(raise_exception=True):
                 try:
                     data = annotation.patch_job_data(pk, request.user,
-                        serializer.data, action)
+                                                     serializer.data, action)
                 except (AttributeError, IntegrityError) as e:
                     return Response(data=str(e), status=status.HTTP_400_BAD_REQUEST)
                 return Response(data)
 
+
 class UserViewSet(viewsets.GenericViewSet, mixins.ListModelMixin,
-    mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin):
+                  mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin):
     queryset = User.objects.all().order_by('id')
     http_method_names = ['get', 'post', 'head', 'patch', 'delete']
 
@@ -513,7 +525,7 @@ class UserViewSet(viewsets.GenericViewSet, mixins.ListModelMixin,
             return UserSerializer
         else:
             is_self = int(self.kwargs.get("pk", 0)) == user.id or \
-                self.action == "self"
+                      self.action == "self"
             if is_self and self.request.method in SAFE_METHODS:
                 return UserSerializer
             else:
@@ -533,8 +545,9 @@ class UserViewSet(viewsets.GenericViewSet, mixins.ListModelMixin,
     @action(detail=False, methods=['GET'])
     def self(self, request):
         serializer_class = self.get_serializer_class()
-        serializer = serializer_class(request.user, context={ "request": request })
+        serializer = serializer_class(request.user, context={"request": request})
         return Response(serializer.data)
+
 
 class PluginViewSet(viewsets.ModelViewSet):
     queryset = Plugin.objects.all()
@@ -553,15 +566,15 @@ class PluginViewSet(viewsets.ModelViewSet):
     # def data_detail(self, request, name, id):
     #     pass
 
-
     @action(detail=True, methods=['GET', 'POST'], serializer_class=RqStatusSerializer)
     def requests(self, request, name):
         pass
 
     @action(detail=True, methods=['GET', 'DELETE'],
-        serializer_class=RqStatusSerializer, url_path='requests/(?P<id>\d+)')
+            serializer_class=RqStatusSerializer, url_path='requests/(?P<id>\d+)')
     def request_detail(self, request, name, rq_id):
         pass
+
 
 def rq_handler(job, exc_type, exc_value, tb):
     job.exc_info = "".join(
@@ -571,6 +584,7 @@ def rq_handler(job, exc_type, exc_value, tb):
         return task.rq_handler(job, exc_type, exc_value, tb)
 
     return True
+
 
 def load_data_proxy(request, rq_id, rq_func, pk):
     queue = django_rq.get_queue("default")

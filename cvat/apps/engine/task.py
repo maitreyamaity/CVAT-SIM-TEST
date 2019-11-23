@@ -1,4 +1,3 @@
-
 # Copyright (C) 2018 Intel Corporation
 #
 # SPDX-License-Identifier: MIT
@@ -13,7 +12,7 @@ from ast import literal_eval
 from urllib import error as urlerror
 from urllib import parse as urlparse
 from urllib import request as urlrequest
-
+from cvat.apps.engine.awsHelper import AWSHelper
 from cvat.apps.engine.media_extractors import get_mime, MEDIA_TYPES
 
 import django_rq
@@ -24,13 +23,15 @@ from distutils.dir_util import copy_tree
 from . import models
 from .log import slogger
 
+
 ############################# Low Level server API
 
 def create(tid, data):
     """Schedule the task"""
     q = django_rq.get_queue('default')
     q.enqueue_call(func=_create_thread, args=(tid, data),
-        job_id="/api/v1/tasks/{}".format(tid))
+                   job_id="/api/v1/tasks/{}".format(tid))
+
 
 @transaction.atomic
 def rq_handler(job, exc_type, exc_value, traceback):
@@ -40,6 +41,7 @@ def rq_handler(job, exc_type, exc_value, traceback):
     with open(db_task.get_log_path(), "wt") as log_file:
         print_exception(exc_type, exc_value, traceback, file=log_file)
     return False
+
 
 ############################# Internal implementation for server API
 
@@ -84,6 +86,7 @@ def get_image_meta_cache(db_task):
         with open(db_task.get_image_meta_cache_path()) as meta_cache_file:
             return literal_eval(meta_cache_file.read())
 
+
 def _copy_data_from_share(server_files, upload_dir):
     job = rq.get_current_job()
     job.meta['status'] = 'Data are being copied from share..'
@@ -99,6 +102,7 @@ def _copy_data_from_share(server_files, upload_dir):
             if not os.path.exists(target_dir):
                 os.makedirs(target_dir)
             shutil.copyfile(source_path, target_path)
+
 
 def _save_task_to_db(db_task):
     job = rq.get_current_job()
@@ -117,7 +121,7 @@ def _save_task_to_db(db_task):
     default_overlap = 5 if db_task.mode == 'interpolation' else 0
     if db_task.overlap is None:
         db_task.overlap = default_overlap
-    db_task.overlap = min(db_task.overlap, segment_size  // 2)
+    db_task.overlap = min(db_task.overlap, segment_size // 2)
 
     segment_step -= db_task.overlap
 
@@ -140,6 +144,7 @@ def _save_task_to_db(db_task):
 
     db_task.save()
 
+
 def _validate_data(data):
     share_root = settings.SHARE_ROOT
     server_files = []
@@ -160,7 +165,7 @@ def _validate_data(data):
     # the example above only 2.txt and 1.txt files will be in the final list.
     # Also need to correctly handle 'a/b/c0', 'a/b/c' case.
     data['server_files'] = [v[1] for v in zip([""] + server_files, server_files)
-        if not os.path.dirname(v[0]).startswith(v[1])]
+                            if not os.path.dirname(v[0]).startswith(v[1])]
 
     def count_files(file_mapping, counter):
         for rel_path, full_path in file_mapping.items():
@@ -169,18 +174,17 @@ def _validate_data(data):
                 counter[mime].append(rel_path)
             else:
                 slogger.glob.warn("Skip '{}' file (its mime type doesn't "
-                    "correspond to a video or an image file)".format(full_path))
+                                  "correspond to a video or an image file)".format(full_path))
 
-
-    counter = { media_type: [] for media_type in MEDIA_TYPES.keys() }
+    counter = {media_type: [] for media_type in MEDIA_TYPES.keys()}
 
     count_files(
-        file_mapping={ f:f for f in data['remote_files'] or data['client_files']},
+        file_mapping={f: f for f in data['remote_files'] or data['client_files']},
         counter=counter,
     )
 
     count_files(
-        file_mapping={ f:os.path.abspath(os.path.join(share_root, f)) for f in data['server_files']},
+        file_mapping={f: os.path.abspath(os.path.join(share_root, f)) for f in data['server_files']},
         counter=counter,
     )
 
@@ -204,6 +208,7 @@ def _validate_data(data):
         raise ValueError('No media data found')
 
     return counter
+
 
 def _download_data(urls, upload_dir):
     job = rq.get_current_job()
@@ -231,6 +236,7 @@ def _download_data(urls, upload_dir):
 
         local_files[name] = True
     return list(local_files.keys())
+
 
 @transaction.atomic
 def _create_thread(tid, data):
@@ -272,11 +278,20 @@ def _create_thread(tid, data):
         length += len(extractor)
         db_task.mode = MEDIA_TYPES[media_type]['mode']
         extractors.append(extractor)
-
+    aws = AWSHelper()
+    IMGPATHS = []
     for extractor in extractors:
         for frame, image_orig_path in enumerate(extractor):
             image_dest_path = db_task.get_frame_path(db_task.size)
             dirname = os.path.dirname(image_dest_path)
+            dirpath = os.getcwd()
+            relativedirpath = dirname.replace(dirpath + '/', "")
+            F = []
+            F.append(image_dest_path)
+            F.append(relativedirpath)
+            IMGPATHS.append(F)
+            if aws.serchContent(dirname) is False:
+                aws.createFolder(dirname)
 
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
@@ -310,3 +325,10 @@ def _create_thread(tid, data):
 
     slogger.glob.info("Founded frames {} for task #{}".format(db_task.size, tid))
     _save_task_to_db(db_task)
+
+    for F in IMGPATHS:
+        filepath = F[0]
+        dirpath = F[1]
+        aws.uploadFile(filepath, dirpath)
+        if os.path.exists(filepath):
+            os.remove(filepath)
