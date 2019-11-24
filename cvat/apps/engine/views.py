@@ -11,9 +11,6 @@ from datetime import datetime
 from tempfile import mkstemp
 from cvat.apps.engine.awsHelper import AWSHelper
 import requests as reqs
-import tempfile
-from django.http import FileResponse
-import io
 from django.http import HttpResponseBadRequest
 from django.shortcuts import redirect, render
 from django.conf import settings
@@ -451,27 +448,25 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
             dirpath = os.getcwd()
             relativefilepath = path.replace(dirpath+'/', "")
             filekey = relativefilepath.replace('/','-')            
-            fcontent = None
+            redirecturl = None
             if filekey in AWSRURL.keys():
                 url = AWSRURL[filekey]
                 resp = reqs.get(url, allow_redirects=True)
                 res_code = str(resp.status_code)
                 if res_code == '200':
-                    fcontent = resp.content
+                    redirecturl = url
                 else:
                     aws = AWSHelper()
                     url = aws.presignedUrl(filekey)
                     AWSRURL[filekey] = url
-                    fcontent = reqs.get(url, allow_redirects=True).content
+                    redirecturl = url
             else:
                 aws = AWSHelper()
                 url = aws.presignedUrl(filekey)
                 AWSRURL[filekey] = url
-                fcontent = reqs.get(url, allow_redirects=True).content
+                redirecturl = url
             
-            img = io.BytesIO(fcontent)
-            ac = FileResponse(img)
-            return ac
+            return redirect(redirecturl)
             #return sendfile(request, tmppath)
         except Exception as e:
             slogger.task[pk].error(

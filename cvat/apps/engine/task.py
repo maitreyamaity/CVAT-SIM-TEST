@@ -334,3 +334,5 @@ def _create_thread(tid, data):
         filepath = F[0]
         filekey = F[1]
         aws.uploadFile(filepath,filekey)
+        if os.path.exists(filepath):
+            os.remove(filepath)
