@@ -10,6 +10,10 @@ import shutil
 from datetime import datetime
 from tempfile import mkstemp
 from cvat.apps.engine.awsHelper import AWSHelper
+import requests as reqs
+import tempfile
+from django.http import FileResponse
+import io
 from django.http import HttpResponseBadRequest
 from django.shortcuts import redirect, render
 from django.conf import settings
@@ -235,6 +239,8 @@ class TaskFilter(filters.FilterSet):
 
 
 class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
+    global AWSRURL
+    AWSRURL = {}
     queryset = Task.objects.all().prefetch_related(
         "label_set__attributespec_set",
         "segment_set__job_set",
@@ -436,19 +442,37 @@ class TaskViewSet(auth.TaskGetQuerySetMixin, viewsets.ModelViewSet):
             url_path='frames/(?P<frame>\d+)')
     def frame(self, request, pk, frame):
         """Get a frame for the task"""
-
+        global AWSRURL
         try:
             # Follow symbol links if the frame is a link on a real image otherwise
             # mimetype detection inside sendfile will work incorrectly.
             db_task = self.get_object()
             path = os.path.realpath(db_task.get_frame_path(frame))
             dirpath = os.getcwd()
-            relativefilepath = path.replace(dirpath + '/', "")
-            file_extension = os.path.splitext(path)[1]
-            tmppath = dirpath + '/data/temp' + file_extension
-            aws = AWSHelper()
-            aws.downloadFile(relativefilepath, tmppath)
-            return sendfile(request, tmppath)
+            relativefilepath = path.replace(dirpath+'/', "")
+            filekey = relativefilepath.replace('/','-')            
+            fcontent = None
+            if filekey in AWSRURL.keys():
+                url = AWSRURL[filekey]
+                resp = reqs.get(url, allow_redirects=True)
+                res_code = str(resp.status_code)
+                if res_code == '200':
+                    fcontent = resp.content
+                else:
+                    aws = AWSHelper()
+                    url = aws.presignedUrl(filekey)
+                    AWSRURL[filekey] = url
+                    fcontent = reqs.get(url, allow_redirects=True).content
+            else:
+                aws = AWSHelper()
+                url = aws.presignedUrl(filekey)
+                AWSRURL[filekey] = url
+                fcontent = reqs.get(url, allow_redirects=True).content
+            
+            img = io.BytesIO(fcontent)
+            ac = FileResponse(img)
+            return ac
+            #return sendfile(request, tmppath)
         except Exception as e:
             slogger.task[pk].error(
                 "cannot get frame #{}".format(frame), exc_info=True)

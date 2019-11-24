@@ -278,20 +278,22 @@ def _create_thread(tid, data):
         length += len(extractor)
         db_task.mode = MEDIA_TYPES[media_type]['mode']
         extractors.append(extractor)
+    
     aws = AWSHelper()
     IMGPATHS = []
     for extractor in extractors:
         for frame, image_orig_path in enumerate(extractor):
             image_dest_path = db_task.get_frame_path(db_task.size)
             dirname = os.path.dirname(image_dest_path)
+            file_name = os.path.basename(image_dest_path)
             dirpath = os.getcwd()
-            relativedirpath = dirname.replace(dirpath + '/', "")
+            relativedirpath = dirname.replace(dirpath+'/', "")
+            relativedirpath = relativedirpath.replace('/','-')
+            fileKey = relativedirpath+'-'+file_name
             F = []
             F.append(image_dest_path)
-            F.append(relativedirpath)
+            F.append(fileKey)
             IMGPATHS.append(F)
-            if aws.serchContent(dirname) is False:
-                aws.createFolder(dirname)
 
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
@@ -326,9 +328,9 @@ def _create_thread(tid, data):
     slogger.glob.info("Founded frames {} for task #{}".format(db_task.size, tid))
     _save_task_to_db(db_task)
 
+    job.meta['status'] = 'Images are being uploaded on AWS'
+    job.save_meta()
     for F in IMGPATHS:
         filepath = F[0]
-        dirpath = F[1]
-        aws.uploadFile(filepath, dirpath)
-        if os.path.exists(filepath):
-            os.remove(filepath)
+        filekey = F[1]
+        aws.uploadFile(filepath,filekey)

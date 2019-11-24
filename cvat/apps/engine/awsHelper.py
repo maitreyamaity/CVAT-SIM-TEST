@@ -1,44 +1,26 @@
 import boto3
-import botocore
-import os
 
 class AWSHelper:
     def __init__(self):
         self.client = boto3.client(
-            's3',
-            aws_access_key_id="",
-            aws_secret_access_key="",
-        )
-        self.BUCKET_NAME = ""
-
-    def serchContent(self, fname):
-        fname = fname + '/'
-        paginator = self.client.get_paginator('list_objects')
-        page_iterator = paginator.paginate(Bucket=self.BUCKET_NAME)
+            's3', 
+            aws_access_key_id='XXXXXXXXXXXXXXXXXXXXX', 
+            aws_secret_access_key='XXXXXXXXXXXXXXXXXXXXXXXX',
+            )
+        self.BUCKET_NAME = 'XXXXXXXXXXXXXXXXXXXXXX'
+        
+    def uploadFile(self, filePath, fileKey):
         try:
-            for page in page_iterator:
-                contents = page['Contents']
-                for obj in contents:
-                    key = obj["Key"]
-                    if key == fname:
-                        return True
-        except:
-            return False
-        return False
-
-    def createFolder(self, directory_name):
-        # directory_name = "maitreya/jap" #it's name of your folders
-        self.client.put_object(Bucket=self.BUCKET_NAME, Key=(directory_name + '/'))
-
-    def uploadFile(self, filepath, directory_name):
-        file_name = os.path.basename(filepath)
-        with open(filepath, "rb") as f:
-            self.client.upload_fileobj(f, self.BUCKET_NAME, '%s/%s' % (directory_name, file_name))
-        f.close()
-
-    def downloadFile(self, fileKey, output_path):
+            with open(filePath, "rb") as f:
+                self.client.upload_fileobj(f, self.BUCKET_NAME, fileKey)
+            f.close()
+        except Exception as e:
+            print('AWS File Upload Error:',e)
+    
+    def presignedUrl(self, fkey):
         try:
-            self.client.download_file(self.BUCKET_NAME, fileKey, output_path)
-        except botocore.exceptions.ClientError as e:
-            print(e)
-
+            response = self.client.generate_presigned_url('get_object', Params={'Bucket': self.BUCKET_NAME, 'Key': fkey}, ExpiresIn=3600, HttpMethod='GET')
+        except Exception as e:
+            print('AWS Url Create Error:',e)
+            return None
+        return response
