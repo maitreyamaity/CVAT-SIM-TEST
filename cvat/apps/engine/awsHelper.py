@@ -6,22 +6,24 @@ class AWSHelper:
     def __init__(self):
         self.client = boto3.client(
             's3',
-            aws_access_key_id="AKIAQESGBNJZKR6ZHXL2",
-            aws_secret_access_key="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",
+            aws_access_key_id="",
+            aws_secret_access_key="",
         )
-        self.BUCKET_NAME = "adv-tec.test-bucket"
+        self.BUCKET_NAME = ""
 
     def serchContent(self, fname):
         fname = fname + '/'
         paginator = self.client.get_paginator('list_objects')
         page_iterator = paginator.paginate(Bucket=self.BUCKET_NAME)
-        for page in page_iterator:
-            contents = page['Contents']
-            for obj in contents:
-                key = obj["Key"]
-                if key == fname:
-                    return True
-
+        try:
+            for page in page_iterator:
+                contents = page['Contents']
+                for obj in contents:
+                    key = obj["Key"]
+                    if key == fname:
+                        return True
+        except:
+            return False
         return False
 
     def createFolder(self, directory_name):
