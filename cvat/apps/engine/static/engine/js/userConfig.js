@@ -203,9 +203,15 @@ class Config {
             },
 
             propagate_shape: {
+                value: 'ctrl+p',
+                view_value: 'Ctrl + P',
+                description: 'propagate active shape',
+            },
+
+            merge_copypaste_shape: {
                 value: 'ctrl+b',
                 view_value: 'Ctrl + B',
-                description: 'propagate active shape',
+                description: 'merge copied shape',
             },
 
             switch_paste: {

@@ -15,7 +15,7 @@
 */
 
 'use strict';
-
+var FIRSTUSE=0;
 class FrameProvider extends Listener {
     constructor(stop, tid) {
         super('onFrameLoad', () => this._loaded);
@@ -333,6 +333,16 @@ class PlayerModel extends Listener {
             this._frame.previous = this._frame.current;
             //this.fit(); // notify() inside the fit()
 			this.notify();
+            if(this._frame.current == 0 && FIRSTUSE == 0){
+                this.fit();
+                this.notify();
+                FIRSTUSE = 1;
+            }
+            else {
+                this.notify();
+            }
+
+
         } else {
             this._frame.previous = this._frame.current;
             this.notify();

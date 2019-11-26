@@ -27,6 +27,9 @@ class ShapeBufferModel extends Listener  {
         this._mergeCollection = mergeCollection;
         this._pasteMode = false;
         this._propagateFrames = 50;
+        this._srcCopyFrameShape = null;
+        this._srcCopyFrameNo = null;
+        this._mergeCPStat = 0;
         this._shape = {
             type: null,
             mode: null,
@@ -126,12 +129,19 @@ class ShapeBufferModel extends Listener  {
         }
     }
 
+    mergeCopyPaste() {
+        this._mergeCPStat = 1;        
+        this.switchPaste();
+    }
+
     copyToBuffer() {
         let activeShape = this._collection.activeShape;
         if (activeShape) {
             Logger.addEvent(Logger.EventType.copyObject, {
                 count: 1,
             });
+            this._srcCopyFrameShape = activeShape;
+            this._srcCopyFrameNo = window.cvat.player.frames.current;
             let interpolation = activeShape.interpolate(window.cvat.player.frames.current);
             if (!interpolation.position.outsided) {
                 this._shape.type = activeShape.type.split('_')[1];
@@ -298,6 +308,10 @@ class ShapeBufferController {
                 this._model.switchPaste();
             }.bind(this));
 
+            let mergeCPHandler = Logger.shortkeyLogDecorator(function() {
+                this._model.mergeCopyPaste();
+            }.bind(this));
+
             let propagateDialogShowed = false;
             let propagateHandler = Logger.shortkeyLogDecorator(function() {
                 if (!propagateDialogShowed) {
@@ -332,6 +346,7 @@ class ShapeBufferController {
             Mousetrap.bind(shortkeys["copy_shape"].value, copyHandler, 'keydown');
             Mousetrap.bind(shortkeys["propagate_shape"].value, propagateHandler, 'keydown');
             Mousetrap.bind(shortkeys["switch_paste"].value, switchHandler, 'keydown');
+            Mousetrap.bind(shortkeys["merge_copypaste_shape"].value, mergeCPHandler, 'keydown');
         }
     }
 
@@ -343,6 +358,57 @@ class ShapeBufferController {
 
             if (!e.ctrlKey) {
                 this._model.switchPaste();
+
+                if(this._model._mergeCPStat == 1){
+                    const dstCopyFrameShape = this._model._collection.selectShape(
+                        this._model._collection.lastPosition,
+                        true,
+                    );
+                    window.cvat.mode = 'merge';
+                    var dstCopyFrameNo = window.cvat.player.frames.current;
+                    this._model._mergeCollection.start();
+                    this._model._mergeCollection._playerModel._model.shift(this._model._srcCopyFrameNo,true);
+                    this._model._mergeCollection._playerModel._model.pause();
+                    this._SRCPOS = this._model._collection.lastPosition;
+                    var amodel = this._model._srcCopyFrameShape;
+                    var ashapeType = amodel.type.split('_')[1];
+                    var positions = amodel._positions;
+                    var position = JSON.parse(JSON.stringify(positions[String(this._model._srcCopyFrameNo)]));
+                    if (ashapeType == 'box') {                    
+                        var px = Number(position.xtl);
+                        var py = Number(position.ytl);        
+                        this._SRCPOS.x = px;
+                        this._SRCPOS.y = py;
+                    }
+                    else if (ashapeType == 'polygon') {
+                        var points = position.points;
+                        var pp = points.split(' ')[0];
+                        var px = Number(pp.split(',')[0]);
+                        var py = Number(pp.split(',')[1]);
+                        this._SRCPOS.x = px+1;
+                        this._SRCPOS.y = py+1;
+                    } 
+                    else {
+                        var points = position.points;
+                        var pp = points.split(' ')[0];
+                        var px = Number(pp.split(',')[0]);
+                        var py = Number(pp.split(',')[1]);
+                        this._SRCPOS.x = px;
+                        this._SRCPOS.y = py;
+                    }   
+                    const activesrcframe = this._model._collection.selectShape(
+                        this._SRCPOS,
+                        true,
+                    );   
+                    this._model._mergeCollection._pushForMerge(activesrcframe);
+                    this._model._mergeCollection._playerModel._model.shift(dstCopyFrameNo,true);
+                    this._model._mergeCollection._playerModel._model.pause();
+                    this._model._mergeCollection._pushForMerge(dstCopyFrameShape);
+                    this._model._mergeCollection.done();
+                    this._model._mergeCPStat = 0;
+                    //this._model._srcCopyFrameShape = dstCopyFrameShape;
+                    //this._model._srcCopyFrameNo = dstCopyFrameNo;
+                }
             }
         }
     }
