@@ -89,8 +89,33 @@ class ShapeMergerModel extends Listener {
             var pp = points.split(' ')[0];
             var px = Number(pp.split(',')[0]);
             var py = Number(pp.split(',')[1]);
-            this._LASTPOS.x = px+1;
-            this._LASTPOS.y = py+1;
+            var fw = position.width;
+            var fh = position.height;
+            var imgWidth = window.cvat.job.images[lf].width;
+            var imgHeight = window.cvat.job.images[lf].height;
+            var pcount = 0;
+            while (pcount < 361) {
+                var Angle = pcount;
+                var Radius = 5;
+                var X = px+Radius*Math.sin(Angle*Math.PI/180);
+                var Y = py+Radius*-Math.cos(Angle*Math.PI/180);
+                this._LASTPOS.x = X;
+                this._LASTPOS.y = Y;
+                if(this._LASTPOS.x<0 || this._LASTPOS.x>imgWidth || this._LASTPOS.y<0 || this._LASTPOS.y>imgHeight){
+                    continue;
+                }
+                const activesrcframe = this._collectionModel.selectShape(
+                    this._LASTPOS,
+                    true,
+                ); 
+                if(activesrcframe) {
+                    if( JSON.parse(JSON.stringify(activesrcframe._positions[String(this._playerModel.currentFrameNum())])).width==fw) {
+                        break;
+                    }
+                }
+                pcount++;
+            }
+            
         } 
         else {
             var points = position.points;
@@ -308,9 +333,34 @@ class ShapeMergerModel extends Listener {
             var pp = points.split(' ')[0];
             var px = Number(pp.split(',')[0]);
             var py = Number(pp.split(',')[1]);
-            this._LASTPOS.x = px+1;
-            this._LASTPOS.y = py+1;
-        } 
+            var fw = position.width;
+            var fh = position.height;
+            var imgWidth = window.cvat.job.images[lf].width;
+            var imgHeight = window.cvat.job.images[lf].height;
+            var pcount = 0;
+            while (pcount < 361) {
+                var Angle = pcount;
+                var Radius = 5;
+                var X = px+Radius*Math.sin(Angle*Math.PI/180);
+                var Y = py+Radius*-Math.cos(Angle*Math.PI/180);
+                this._LASTPOS.x = X;
+                this._LASTPOS.y = Y;
+                if(this._LASTPOS.x<0 || this._LASTPOS.x>imgWidth || this._LASTPOS.y<0 || this._LASTPOS.y>imgHeight){
+                    continue;
+                }
+                const activesrcframe = this._collectionModel.selectShape(
+                    this._LASTPOS,
+                    true,
+                ); 
+                if(activesrcframe) {
+                    if( JSON.parse(JSON.stringify(activesrcframe._positions[String(this._playerModel.currentFrameNum())])).width==fw) {
+                        break;
+                    }
+                }
+                pcount++;
+            }
+            
+        }
         else {
             var points = position.points;
             var pp = points.split(' ')[0];

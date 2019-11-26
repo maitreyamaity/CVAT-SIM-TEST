@@ -385,8 +385,33 @@ class ShapeBufferController {
                         var pp = points.split(' ')[0];
                         var px = Number(pp.split(',')[0]);
                         var py = Number(pp.split(',')[1]);
-                        this._SRCPOS.x = px+1;
-                        this._SRCPOS.y = py+1;
+                        var fw = position.width;
+                        var fh = position.height;
+                        var imgWidth = window.cvat.job.images[this._model._srcCopyFrameNo].width;
+                        var imgHeight = window.cvat.job.images[this._model._srcCopyFrameNo].height;
+                        var pcount = 0;
+                        while (pcount < 361) {
+                            var Angle = pcount;
+                            var Radius = 5;
+                            var X = px+Radius*Math.sin(Angle*Math.PI/180);
+                            var Y = py+Radius*-Math.cos(Angle*Math.PI/180);
+                            this._SRCPOS.x = X;
+                            this._SRCPOS.y = Y;
+                            if(this._SRCPOS.x<0 || this._SRCPOS.x>imgWidth || this._SRCPOS.y<0 || this._SRCPOS.y>imgHeight){
+                                continue;
+                            }
+                            const activesrcframe = this._model._collection.selectShape(
+                                this._SRCPOS,
+                                true,
+                            ); 
+                            if(activesrcframe){
+                                if( JSON.parse(JSON.stringify(activesrcframe._positions[String(this._model._srcCopyFrameNo)])).width==fw) {
+                                    break;
+                                }
+                            }
+                            pcount++;
+                        }
+                        
                     } 
                     else {
                         var points = position.points;
